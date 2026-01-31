@@ -31,6 +31,7 @@
     "unique-names-generator": "^4.7.1"
   },
   "devDependencies": {
+    "@netlify/plugin-nextjs": "^5.15.7",
     "@tailwindcss/postcss": "^4.1.18",
     "babel-plugin-react-compiler": "^1.0.0",
     "baseline-browser-mapping": "^2.9.19",
