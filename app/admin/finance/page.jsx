@@ -15,9 +15,11 @@ import {
     Calendar,
     Briefcase,
     User,
+    Pencil,
     ChevronRight
 } from 'lucide-react';
 import Link from 'next/link';
+import DeleteTransactionButton from './_components/delete-transaction-button';
 
 export default async function AdminFinancePage() {
     const session = await getServerSession(authOptions);
@@ -232,9 +234,16 @@ export default async function AdminFinancePage() {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            <button className="text-text-muted hover:text-white transition-colors">
-                                                <ChevronRight size={18} />
-                                            </button>
+                                            <div className="flex items-center justify-end gap-2">
+                                                <Link 
+                                                    href={`/admin/finance/edit/${t.id}`}
+                                                    className="text-text-muted hover:text-white transition-colors p-2 hover:bg-white/5 rounded-lg"
+                                                    title="Editar transação"
+                                                >
+                                                    <Pencil size={18} />
+                                                </Link>
+                                                <DeleteTransactionButton id={t.id} />
+                                            </div>
                                         </td>
                                     </tr>
                                 ))

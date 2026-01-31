@@ -12,7 +12,9 @@ if (!connectionString) {
     console.error("CRITICAL ERROR: DATABASE_URL or NETLIFY_DATABASE_URL is not set!");
 }
 
-const sql = neon(connectionString!);
+// Use a fallback string to prevent crash at module import time if env is missing.
+// This allows diagnostic routes (like /api/debug/db) to run and report the missing env.
+const sql = neon(connectionString || "postgres://placeholder:placeholder@placeholder.neondatabase.com/placeholder");
 
 export const db = drizzle({
     schema,
