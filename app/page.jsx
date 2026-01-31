@@ -33,10 +33,17 @@ export default async function Page() {
                 <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">TDJ Studio</h1>
                 
                 {error && (
-                    <div className="mb-4 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-sm text-left overflow-auto max-h-40">
+                    <div className="mb-4 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-sm text-left overflow-auto max-h-60">
                         <p className="font-bold mb-1">Erro de Inicialização:</p>
-                        <p>{error}</p>
-                        <p className="mt-2 text-xs opacity-70">Verifique as variáveis de ambiente (NEXTAUTH_SECRET, DATABASE_URL) no painel do Netlify.</p>
+                        <p className="mb-2">{error}</p>
+                        <p className="text-xs opacity-70 mb-3">Verifique as variáveis de ambiente (NEXTAUTH_SECRET, DATABASE_URL) no painel do Netlify.</p>
+                        <a 
+                            href="/api/debug/db" 
+                            target="_blank"
+                            className="inline-block px-3 py-1 bg-red-500/30 hover:bg-red-500/50 rounded text-xs text-white font-bold transition-colors"
+                        >
+                            Verificar Diagnóstico →
+                        </a>
                     </div>
                 )}
 

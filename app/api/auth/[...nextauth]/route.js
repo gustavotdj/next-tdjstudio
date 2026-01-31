@@ -21,7 +21,7 @@ export const authOptions = {
     ],
     callbacks: {
         async signIn({ user, account, profile }) {
-            if (account.provider === 'google') {
+            if (account?.provider === 'google') {
                 const email = user.email;
                 if (!email) return false;
 

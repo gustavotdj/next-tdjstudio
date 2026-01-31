@@ -161,7 +161,7 @@ export default async function ClientProjectDetailsPage({ params }) {
                 </div>
 
                 {/* Sidebar (Right) - Links & Quick Info */}
-                <aside className="lg:col-span-3 space-y-6 sticky top-8 order-1 lg:order-2">
+                <aside className="lg:col-span-3 space-y-6 sticky top-28 z-30 order-1 lg:order-2">
                     {/* Links Section */}
                     <div className="bg-surface/30 rounded-2xl border border-white/5 overflow-hidden">
                         <ProjectLinks 

@@ -125,6 +125,13 @@ export default function GanttChart({ subProjects }) {
         return items;
     }, [minDate, maxDate, totalDays]);
 
+    const todayPosition = useMemo(() => {
+        if (!minDate || !maxDate) return null;
+        const today = new Date();
+        if (today < minDate || today > maxDate) return null;
+        return getPosition(today);
+    }, [minDate, maxDate]);
+
     return (
         <div className="bg-surface/50 rounded-2xl border border-white/5 p-6 backdrop-blur-sm overflow-hidden">
             <div className="flex items-center gap-3 mb-6">
@@ -138,7 +145,20 @@ export default function GanttChart({ subProjects }) {
             </div>
 
             <div className="overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-                <div className="min-w-[1000px]">
+                <div className="min-w-[1000px] relative">
+                    {/* Today Line */}
+                    {todayPosition !== null && (
+                        <div 
+                            className="absolute top-0 bottom-0 w-px bg-blue-500 z-10 pointer-events-none shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+                            style={{ left: `${todayPosition}%` }}
+                        >
+                            <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-blue-500 shadow-sm"></div>
+                            <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap">
+                                Hoje
+                            </div>
+                        </div>
+                    )}
+
                     {/* Headers */}
                     <div className="flex border-b border-white/5 mb-4">
                         <div className="w-48 flex-shrink-0"></div>
