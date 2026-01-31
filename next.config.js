@@ -1,7 +1,23 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   reactCompiler: true,
-  
+  // Desabilitando Turbopack se estiver causando travamentos
+  experimental: {
+    // turbopack: false, 
+  },
+
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+        port: '',
+        pathname: '/**',
+      },
+    ],
+  },
+
   redirects() {
     return [
       {
@@ -26,7 +42,7 @@ const nextConfig = {
       },
     ];
   },
-  
+
   rewrites() {
     return [
       {

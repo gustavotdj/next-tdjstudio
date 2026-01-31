@@ -1,63 +1,36 @@
 import Link from 'next/link';
-import { Card } from 'components/card';
-import { ContextAlert } from 'components/context-alert';
-import { Markdown } from 'components/markdown';
-import { RandomQuote } from 'components/random-quote';
-import { getNetlifyContext } from 'utils';
+import { getServerSession } from 'next-auth';
+import { authOptions } from './api/auth/[...nextauth]/route';
+import { AuthButton } from '../components/auth-button';
+import { redirect } from 'next/navigation';
 
-const contextExplainer = `
-The card below is rendered on the server based on the value of \`process.env.CONTEXT\` 
-([docs](https://docs.netlify.com/configure-builds/environment-variables/#build-metadata)):
-`;
+export default async function Page() {
+    const session = await getServerSession(authOptions);
 
-const preDynamicContentExplainer = `
-The card content below is fetched by the client-side from \`/quotes/random\` (see file \`app/quotes/random/route.js\`) with a different quote shown on each page load:
-`;
+    if (session) {
+        if (session.user.role === 'client') {
+            redirect('/client/projects');
+        } else {
+            redirect('/admin/dashboard');
+        }
+    }
 
-const ctx = getNetlifyContext();
-
-export default function Page() {
     return (
-        <div className="flex flex-col gap-12 sm:gap-16">
-            <section>
-                <ContextAlert className="mb-6" />
-                <h1 className="mb-4">Netlify Platform Starter – Next.js</h1>
-                <p className="mb-6 text-lg">
-                    Deploy the latest version of Next.js — including Turbopack, React Compiler, and the new caching APIs
-                    — on Netlify in seconds. No configuration or custom adapter required.
+        <div className="flex flex-col items-center justify-center min-h-screen bg-background relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none"></div>
+            <div className="z-10 text-center p-8 max-w-md w-full bg-surface/30 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl">
+                <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center text-white text-3xl shadow-lg shadow-primary/30 mx-auto mb-8">
+                    ⚡
+                </div>
+                <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">TDJ Studio</h1>
+                <p className="text-text-muted mb-8 text-sm leading-relaxed">
+                    Plataforma exclusiva para gestão de projetos e clientes.
+                    Acesso restrito a usuários autorizados.
                 </p>
-                <Link href="https://docs.netlify.com/frameworks/next-js/overview/" className="btn btn-lg sm:min-w-64">
-                    Read the Docs
-                </Link>
-            </section>
-            {!!ctx && (
-                <section className="flex flex-col gap-4">
-                    <Markdown content={contextExplainer} />
-                    <RuntimeContextCard />
-                </section>
-            )}
-            <section className="flex flex-col gap-4">
-                <Markdown content={preDynamicContentExplainer} />
-                <RandomQuote />
-            </section>
+                <div className="flex justify-center">
+                    <AuthButton />
+                </div>
+            </div>
         </div>
     );
-}
-
-function RuntimeContextCard() {
-    const title = `Netlify Context: running in ${ctx} mode.`;
-    if (ctx === 'dev') {
-        return (
-            <Card title={title}>
-                <p>Next.js will rebuild any page you navigate to, including static pages.</p>
-            </Card>
-        );
-    } else {
-        const now = new Date().toISOString();
-        return (
-            <Card title={title}>
-                <p>This page was statically-generated at build time ({now}).</p>
-            </Card>
-        );
-    }
 }
