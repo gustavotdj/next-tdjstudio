@@ -14,8 +14,8 @@ export const authOptions = {
     }),
     providers: [
         GoogleProvider({
-            clientId: process.env.GOOGLE_CLIENT_ID,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            clientId: process.env.GOOGLE_CLIENT_ID || "missing-google-client-id",
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET || "missing-google-client-secret",
             allowDangerousEmailAccountLinking: true,
         }),
     ],

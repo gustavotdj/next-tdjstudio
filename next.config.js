@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  reactCompiler: true,
+  // reactCompiler: true, // Temporarily disabled to rule out compatibility issues with Netlify Runtime
   // Desabilitando Turbopack se estiver causando travamentos
   experimental: {
     // turbopack: false, 

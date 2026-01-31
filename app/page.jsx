@@ -5,7 +5,15 @@ import { AuthButton } from '../components/auth-button';
 import { redirect } from 'next/navigation';
 
 export default async function Page() {
-    const session = await getServerSession(authOptions);
+    let session = null;
+    let error = null;
+
+    try {
+        session = await getServerSession(authOptions);
+    } catch (e) {
+        console.error("Error fetching session:", e);
+        error = e.message;
+    }
 
     if (session) {
         if (session.user.role === 'client') {
@@ -23,6 +31,15 @@ export default async function Page() {
                     ⚡
                 </div>
                 <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">TDJ Studio</h1>
+                
+                {error && (
+                    <div className="mb-4 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-sm text-left overflow-auto max-h-40">
+                        <p className="font-bold mb-1">Erro de Inicialização:</p>
+                        <p>{error}</p>
+                        <p className="mt-2 text-xs opacity-70">Verifique as variáveis de ambiente (NEXTAUTH_SECRET, DATABASE_URL) no painel do Netlify.</p>
+                    </div>
+                )}
+
                 <p className="text-text-muted mb-8 text-sm leading-relaxed">
                     Plataforma exclusiva para gestão de projetos e clientes.
                     Acesso restrito a usuários autorizados.
