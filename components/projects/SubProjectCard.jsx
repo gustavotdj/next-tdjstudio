@@ -505,7 +505,7 @@ export default function SubProjectCard({ subProject, projectId, readOnly = false
                                                                 const client = availableClients.find(c => c.id === clientId);
                                                                 if (!client) return null;
                                                                 return (
-                                                                    <div key={clientId} className="w-6 h-6 rounded-full bg-surface border border-white/10 flex items-center justify-center text-[10px] font-bold text-primary uppercase" title={client.name}>
+                                                                    <div key={`${clientId}-${iIdx}`} className="w-6 h-6 rounded-full bg-surface border border-white/10 flex items-center justify-center text-[10px] font-bold text-primary uppercase" title={client.name}>
                                                                         {client.name.substring(0, 2)}
                                                                     </div>
                                                                 );
@@ -596,7 +596,12 @@ export default function SubProjectCard({ subProject, projectId, readOnly = false
                                             <div className="flex items-center gap-2 group/title flex-1 min-w-0">
                                                 <span 
                                                     className={`cursor-pointer truncate ${isStageComplete ? 'text-emerald-400' : ''}`}
-                                                    onClick={() => !readOnly && setEditingStageIdx(sIdx)}
+                                                    onClick={(e) => {
+                                                        if (!readOnly) {
+                                                            e.stopPropagation();
+                                                            setEditingStageIdx(sIdx);
+                                                        }
+                                                    }}
                                                     title={!readOnly ? "Clique para editar o nome da etapa" : stage.name}
                                                 >
                                                     {stage.name}
@@ -712,7 +717,7 @@ export default function SubProjectCard({ subProject, projectId, readOnly = false
                                                                         const client = availableClients.find(c => c.id === clientId);
                                                                         if (!client) return null;
                                                                         return (
-                                                                            <span key={clientId} className="text-[9px] bg-primary/20 text-primary px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">
+                                                                            <span key={`${clientId}-${iIdx}`} className="text-[9px] bg-primary/20 text-primary px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">
                                                                                 {client.name}
                                                                             </span>
                                                                         );
