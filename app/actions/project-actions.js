@@ -217,8 +217,26 @@ export async function updateProjectCredentials(projectId, credentials) {
     revalidatePath(`/client/projects/${projectId}`);
 }
 
+export async function updateProjectFiles(projectId, files) {
+    await checkProjectAccess(projectId);
+
+    await db.update(projects)
+        .set({
+            files: files,
+            updatedAt: new Date()
+        })
+        .where(eq(projects.id, projectId));
+
+    revalidatePath(`/admin/projects/${projectId}`);
+    revalidatePath(`/client/projects/${projectId}`);
+}
+
 export async function updateSubProjectContent(subProjectId, newContent, projectId) {
-    await checkAdmin();
+    // We allow clients to update content (for task completion), 
+    // but checkProjectAccess ensures they are at least linked to the project.
+    // Ideally we would check if they are only updating their assigned tasks, 
+    // but for now project-level access + UI restrictions is the compromise.
+    await checkProjectAccess(projectId);
 
     await db.update(subProjects)
         .set({ 
@@ -228,6 +246,7 @@ export async function updateSubProjectContent(subProjectId, newContent, projectI
         .where(eq(subProjects.id, subProjectId));
     
     revalidatePath(`/admin/projects/${projectId}`);
+    revalidatePath(`/client/projects/${projectId}`);
 }
 
 export async function updateSubProject(subProjectId, data, projectId) {

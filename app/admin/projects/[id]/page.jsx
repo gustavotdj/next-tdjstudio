@@ -1,16 +1,23 @@
 import { db } from 'db/index';
-import { projects, clients, subProjects } from 'db/schema';
+import { projects, clients, subProjects, projectClients } from 'db/schema';
 import { eq, desc, asc } from 'drizzle-orm';
 import { getServerSession } from 'next-auth';
 import { authOptions } from 'app/api/auth/[...nextauth]/route';
 import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
+import { Calendar, FileText, Link as LinkIcon, Key, Folder, Briefcase } from 'lucide-react';
 import SubProjectList from 'components/projects/SubProjectList';
 import ProjectLinks from 'components/projects/ProjectLinks';
 import GanttChart from 'components/projects/GanttChart';
 import ProjectCredentials from 'components/projects/ProjectCredentials';
-import { createSubProject, updateProjectLinks, updateProjectCredentials } from 'app/actions/project-actions';
+import { createSubProject, updateProjectLinks, updateProjectCredentials, updateProjectFiles } from 'app/actions/project-actions';
 import { decrypt } from 'lib/crypto';
+import ProjectFiles from 'components/projects/ProjectFiles';
+import FileManager from 'components/admin/FileManager';
+import { normalizePath } from 'lib/utils';
+import { TaskNavigationProvider } from 'components/projects/TaskNavigationContext';
+import CollapsibleSection from 'components/ui/CollapsibleSection';
+import CreateSubProjectForm from 'components/projects/CreateSubProjectForm';
 
 export default async function AdminProjectDetailsPage({ params }) {
     const session = await getServerSession(authOptions);
@@ -41,13 +48,38 @@ export default async function AdminProjectDetailsPage({ params }) {
         password: cred.password ? decrypt(cred.password) : ''
     }));
 
-    // Fetch Client manually
+    // Fetch Client manually or try to infer from project name/context if not directly linked (fallback)
     let client = null;
+    let projectClientName = 'Geral'; // Default folder if no client found
+
     if (project.clientId) {
         client = await db.query.clients.findFirst({
             where: eq(clients.id, project.clientId),
         });
+        if (client) {
+            projectClientName = client.name;
+        }
     }
+
+    // Fetch all clients associated with the project (for task assignment)
+    // 1. Owner
+    const associatedClients = [];
+    if (client) {
+        associatedClients.push({ id: client.id, name: client.name });
+    }
+    // 2. Linked Clients (Many-to-Many)
+    const linkedClients = await db.query.projectClients.findMany({
+        where: eq(projectClients.projectId, id),
+        with: {
+            client: true
+        }
+    });
+    
+    linkedClients.forEach(pc => {
+        if (pc.client && !associatedClients.find(c => c.id === pc.client.id)) {
+            associatedClients.push({ id: pc.client.id, name: pc.client.name });
+        }
+    });
 
     // Fetch SubProjects
     const rawSubProjects = await db.query.subProjects.findMany({
@@ -65,8 +97,9 @@ export default async function AdminProjectDetailsPage({ params }) {
     }));
 
     return (
-        <main className="w-full px-6 py-8">
-            {/* Header / Back Link */}
+        <TaskNavigationProvider>
+            <main className="w-full px-6 py-8">
+                {/* Header / Back Link */}
             <div className="mb-8">
                 <Link 
                     href="/admin/projects" 
@@ -108,7 +141,16 @@ export default async function AdminProjectDetailsPage({ params }) {
 
             {/* Gantt Chart Section */}
             <div className="mb-10">
-                <GanttChart subProjects={projectSubProjects} />
+                <CollapsibleSection
+                    id={`admin-gantt-${id}`}
+                    title="Cronograma"
+                    icon={<Calendar />}
+                    defaultOpen={true}
+                >
+                    <div className="p-6">
+                        <GanttChart subProjects={projectSubProjects} />
+                    </div>
+                </CollapsibleSection>
             </div>
 
             {/* Content Grid */}
@@ -116,87 +158,151 @@ export default async function AdminProjectDetailsPage({ params }) {
                 
                 {/* Main Content: Sub-projects / Details */}
                 <div className="md:col-span-2 space-y-8">
-                    <section>
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-semibold text-white">Sub-projetos & Tarefas</h2>
-                            <form action={createSubProject.bind(null, id)} className="flex gap-2">
-                                <input 
-                                    name="name" 
-                                    type="text" 
-                                    placeholder="Novo Sub-projeto (ex: Identidade)" 
-                                    className="px-4 py-2 bg-black/20 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-white placeholder-gray-500 text-sm w-64"
-                                    required
+                    <CollapsibleSection
+                        id={`admin-subprojects-${id}`}
+                        title="Sub-projetos & Tarefas"
+                        icon={<Briefcase />}
+                        defaultOpen={true}
+                        headerRight={<CreateSubProjectForm projectId={id} />}
+                    >
+                        <div className="p-6">
+                            <SubProjectList 
+                                initialSubProjects={projectSubProjects} 
+                                projectId={id} 
+                                projectName={project.name}
+                                clientName={projectClientName} 
+                                availableClients={associatedClients}
+                            />
+                        </div>
+                    </CollapsibleSection>
+
+                    {/* Full Project File Explorer */}
+                    <div className="mt-8">
+                        <CollapsibleSection
+                            id={`admin-filemanager-${id}`}
+                            title={`Arquivos do Projeto: ${project.name}`}
+                            icon={<Folder />}
+                            defaultOpen={true}
+                        >
+                            <div className="p-6">
+                                <FileManager 
+                                    initialPath={`${normalizePath(projectClientName)}/${normalizePath(project.name)}/`} 
+                                    title=""
+                                    projectSubProjects={projectSubProjects}
+                                    projectFiles={project.files}
                                 />
-                                <button type="submit" className="text-sm bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors">
-                                    + Criar
-                                </button>
-                            </form>
-                        </div>
-                        
-                        <div className="space-y-4">
-                            <SubProjectList initialSubProjects={projectSubProjects} projectId={id} />
-                        </div>
-                    </section>
+                            </div>
+                        </CollapsibleSection>
+                    </div>
                 </div>
 
                 {/* Sidebar: Client Info & Meta */}
                 <div className="md:col-span-1 space-y-6">
                     {/* Client Card */}
-                    <div className="bg-surface p-6 rounded-xl shadow-lg border border-white/5">
-                        <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-4">Cliente</h3>
-                        {client ? (
-                            <div>
-                                <Link href={`/admin/clients/${client.id}`} className="block group">
-                                    <div className="text-lg font-bold text-white group-hover:text-primary transition-colors mb-1">
-                                        {client.name}
-                                    </div>
-                                    <div className="text-sm text-text-muted group-hover:text-white/80 transition-colors">
-                                        Ver detalhes do cliente →
-                                    </div>
-                                </Link>
-                                <div className="mt-4 pt-4 border-t border-white/5 space-y-2 text-sm">
-                                    {client.email && (
-                                        <div className="flex items-center gap-2 text-gray-400">
-                                            <span>✉️</span> {client.email}
+                    <CollapsibleSection
+                        id={`admin-client-${id}`}
+                        title="Cliente"
+                        defaultOpen={true}
+                        className="bg-surface"
+                    >
+                        <div className="p-6">
+                            {client ? (
+                                <div>
+                                    <Link href={`/admin/clients/${client.id}`} className="block group">
+                                        <div className="text-lg font-bold text-white group-hover:text-primary transition-colors mb-1">
+                                            {client.name}
                                         </div>
-                                    )}
-                                    {client.phone && (
-                                        <div className="flex items-center gap-2 text-gray-400">
-                                            <span>📱</span> {client.phone}
+                                        <div className="text-sm text-text-muted group-hover:text-white/80 transition-colors">
+                                            Ver detalhes do cliente →
                                         </div>
-                                    )}
+                                    </Link>
+                                    <div className="mt-4 pt-4 border-t border-white/5 space-y-2 text-sm">
+                                        {client.email && (
+                                            <div className="flex items-center gap-2 text-gray-400">
+                                                <span>✉️</span> {client.email}
+                                            </div>
+                                        )}
+                                        {client.phone && (
+                                            <div className="flex items-center gap-2 text-gray-400">
+                                                <span>📱</span> {client.phone}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        ) : (
-                            <div className="text-text-muted italic">
-                                Nenhum cliente vinculado.
-                            </div>
-                        )}
-                    </div>
+                            ) : (
+                                <div className="text-text-muted italic">
+                                    Nenhum cliente vinculado.
+                                </div>
+                            )}
+                        </div>
+                    </CollapsibleSection>
+
+                    {/* Project Files */}
+                    <CollapsibleSection
+                        id={`admin-files-${id}`}
+                        title="Arquivos Gerais"
+                        icon={<FileText size={18} />}
+                        defaultOpen={false}
+                        className="bg-surface"
+                    >
+                        <ProjectFiles 
+                            projectId={id}
+                            projectName={project.name}
+                            clientName={projectClientName}
+                            initialFiles={project.files} 
+                            title=""
+                            onSave={async (files) => {
+                                'use server';
+                                await updateProjectFiles(id, files);
+                            }}
+                        />
+                    </CollapsibleSection>
 
                     {/* Project Links */}
-                    <ProjectLinks 
-                        projectId={id} 
-                        initialLinks={project.links} 
-                        onSave={async (links) => {
-                            'use server';
-                            await updateProjectLinks(id, links);
-                        }}
-                    />
+                    <CollapsibleSection
+                        id={`admin-links-${id}`}
+                        title="Links"
+                        icon={<LinkIcon />}
+                        defaultOpen={false}
+                        className="bg-surface"
+                    >
+                        <ProjectLinks 
+                            projectId={id} 
+                            initialLinks={project.links} 
+                            title=""
+                            onSave={async (links) => {
+                                'use server';
+                                await updateProjectLinks(id, links);
+                            }}
+                        />
+                    </CollapsibleSection>
 
                     {/* Project Credentials */}
-                    <ProjectCredentials 
-                        initialCredentials={decryptedCredentials}
-                        onSave={async (creds) => {
-                            'use server';
-                            await updateProjectCredentials(id, creds);
-                        }}
-                    />
+                    <CollapsibleSection
+                        id={`admin-creds-${id}`}
+                        title="Acessos"
+                        icon={<Key />}
+                        defaultOpen={false}
+                        className="bg-surface"
+                    >
+                        <ProjectCredentials 
+                            initialCredentials={decryptedCredentials}
+                            title=""
+                            onSave={async (creds) => {
+                                'use server';
+                                await updateProjectCredentials(id, creds);
+                            }}
+                        />
+                    </CollapsibleSection>
 
                     {/* Project Meta */}
-                    <div className="bg-surface p-6 rounded-xl shadow-lg border border-white/5">
-                        <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-4">Detalhes</h3>
-                        <div className="space-y-4">
+                    <CollapsibleSection
+                        id={`admin-meta-${id}`}
+                        title="Detalhes"
+                        defaultOpen={false}
+                        className="bg-surface"
+                    >
+                        <div className="p-6 space-y-4">
                             <div className="flex justify-between items-center">
                                 <span className="text-gray-400">Criado em</span>
                                 <span className="text-white font-mono text-sm">
@@ -216,9 +322,10 @@ export default async function AdminProjectDetailsPage({ params }) {
                                 </span>
                             </div>
                         </div>
-                    </div>
+                    </CollapsibleSection>
                 </div>
             </div>
-        </main>
+            </main>
+        </TaskNavigationProvider>
     );
 }

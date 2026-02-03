@@ -157,7 +157,7 @@ export default function ProjectLinks({
         <section className={`bg-surface rounded-xl border border-white/5 overflow-hidden ${readOnly ? 'bg-transparent border-none' : ''}`}>
             <div className={`p-4 border-b border-white/5 flex justify-between items-center ${readOnly ? 'px-0 pt-0 border-none' : ''}`}>
                 <h3 className="font-semibold text-white flex items-center gap-2">
-                    <ExternalLink size={18} className="text-primary" />
+                    {title && <ExternalLink size={18} className="text-primary" />}
                     {title}
                 </h3>
                 {!readOnly && (

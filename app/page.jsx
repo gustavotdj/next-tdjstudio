@@ -4,6 +4,8 @@ import { authOptions } from './api/auth/[...nextauth]/route';
 import { AuthButton } from '../components/auth-button';
 import { redirect } from 'next/navigation';
 
+export const dynamic = 'force-dynamic';
+
 export default async function Page() {
     let session = null;
     let error = null;

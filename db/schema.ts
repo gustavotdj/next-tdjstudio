@@ -91,6 +91,7 @@ export const projects = pgTable("projects", {
         .references(() => clients.id, { onDelete: "cascade" }),
     links: jsonb("links").default([]),
     credentials: jsonb("credentials").default([]),
+    files: jsonb("files").default([]),
     budget: jsonb("budget").default({ total: 0, items: [], type: 'manual' }), // type: manual, dynamic (sum of subprojects)
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),

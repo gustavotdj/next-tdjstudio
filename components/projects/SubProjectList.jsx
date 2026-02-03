@@ -18,8 +18,13 @@ import {
 import SortableSubProjectItem from './SortableSubProjectItem';
 import { updateSubProjectPositions } from 'app/actions/project-actions';
 
-export default function SubProjectList({ initialSubProjects, projectId }) {
+export default function SubProjectList({ initialSubProjects, projectId, projectName, clientName, availableClients = [], currentClientId = null }) {
   const [items, setItems] = useState(initialSubProjects);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Sync with server data if it changes (e.g. after adding a new one)
   useEffect(() => {
@@ -51,8 +56,37 @@ export default function SubProjectList({ initialSubProjects, projectId }) {
     }
   };
 
+  if (!mounted) {
+    return (
+        <div className="space-y-4 ml-8">
+            {items.length > 0 ? (
+               items.map((sub) => (
+                   <SortableSubProjectItem 
+                        key={sub.id} 
+                        subProject={sub} 
+                        projectId={projectId} 
+                        projectName={projectName}
+                        clientName={clientName}
+                        availableClients={availableClients}
+                        currentClientId={currentClientId}
+                    />
+               ))
+           ) : (
+                <div className="p-12 text-center text-text-muted bg-surface rounded-xl border border-white/5 -ml-8">
+                    <div className="flex flex-col items-center gap-3">
+                        <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-2xl opacity-50">📋</div>
+                        <p>Nenhum sub-projeto criado ainda.</p>
+                        <p className="text-sm">Crie um acima para gerenciar etapas e checklists.</p>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+  }
+
   return (
     <DndContext 
+      id="dnd-context"
       sensors={sensors} 
       collisionDetection={closestCenter} 
       onDragEnd={handleDragEnd}
@@ -62,19 +96,19 @@ export default function SubProjectList({ initialSubProjects, projectId }) {
         strategy={verticalListSortingStrategy}
       >
         <div className="space-y-4 ml-8"> {/* Added margin-left for the handle */}
-            {items.length > 0 ? (
-                items.map((sub) => (
-                    <SortableSubProjectItem key={sub.id} subProject={sub} projectId={projectId} />
-                ))
-            ) : (
-                <div className="p-12 text-center text-text-muted bg-surface rounded-xl border border-white/5 -ml-8">
-                    <div className="flex flex-col items-center gap-3">
-                        <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-2xl opacity-50">📋</div>
-                        <p>Nenhum sub-projeto criado ainda.</p>
-                        <p className="text-sm">Crie um acima para gerenciar etapas e checklists.</p>
-                    </div>
-                </div>
-            )}
+          {items.length > 0 ? (
+              items.map((sub) => (
+                  <SortableSubProjectItem key={sub.id} subProject={sub} projectId={projectId} projectName={projectName} clientName={clientName} availableClients={availableClients} currentClientId={currentClientId} />
+              ))
+          ) : (
+              <div className="p-12 text-center text-text-muted bg-surface rounded-xl border border-white/5 -ml-8">
+                  <div className="flex flex-col items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-2xl opacity-50">📋</div>
+                      <p>Nenhum sub-projeto criado ainda.</p>
+                      <p className="text-sm">Crie um acima para gerenciar etapas e checklists.</p>
+                  </div>
+              </div>
+          )}
         </div>
       </SortableContext>
     </DndContext>

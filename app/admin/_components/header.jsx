@@ -8,6 +8,7 @@ export function AdminHeader() {
         { linkText: 'Dashboard', href: '/admin/dashboard' },
         { linkText: 'Clientes', href: '/admin/clients' },
         { linkText: 'Projetos', href: '/admin/projects' },
+        { linkText: 'Arquivos', href: '/admin/files' },
         { linkText: 'Orçamentos', href: '/admin/budgets' },
         { linkText: 'Financeiro', href: '/admin/finance' },
     ];

@@ -5,7 +5,7 @@ import { CSS } from '@dnd-kit/utilities';
 import SubProjectCard from './SubProjectCard';
 import { GripVertical } from 'lucide-react';
 
-export default function SortableSubProjectItem({ subProject, projectId }) {
+export default function SortableSubProjectItem({ subProject, projectId, projectName, clientName, availableClients, currentClientId }) {
     const {
         attributes,
         listeners,
@@ -34,7 +34,14 @@ export default function SortableSubProjectItem({ subProject, projectId }) {
                 <GripVertical size={20} />
             </div>
             
-            <SubProjectCard subProject={subProject} projectId={projectId} />
+            <SubProjectCard 
+                subProject={subProject} 
+                projectId={projectId} 
+                projectName={projectName}
+                clientName={clientName}
+                availableClients={availableClients}
+                currentClientId={currentClientId}
+            />
         </div>
     );
 }

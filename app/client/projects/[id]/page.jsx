@@ -5,11 +5,14 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from 'app/api/auth/[...nextauth]/route';
 import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
+import { CheckSquare, Clock, AlertCircle, ArrowRight, Calendar, FileText, Link as LinkIcon, Key } from 'lucide-react';
 import SubProjectCard from 'components/projects/SubProjectCard';
 import ProjectLinks from 'components/projects/ProjectLinks';
 import ProjectCredentials from 'components/projects/ProjectCredentials';
+import ProjectFiles from 'components/projects/ProjectFiles';
 import GanttChart from 'components/projects/GanttChart';
-import { updateProjectLinks, updateProjectCredentials } from 'app/actions/project-actions';
+import CollapsibleSection from 'components/ui/CollapsibleSection';
+import { updateProjectLinks, updateProjectCredentials, updateProjectFiles, updateSubProjectContent } from 'app/actions/project-actions';
 import { decrypt } from 'lib/crypto';
 
 export default async function ClientProjectDetailsPage({ params }) {
@@ -68,14 +71,38 @@ export default async function ClientProjectDetailsPage({ params }) {
     // Calculate Overall Project Progress
     let totalTasks = 0;
     let completedTasks = 0;
+    const myTasks = [];
+
     projectSubProjects.forEach(sub => {
         sub.content?.stages?.forEach(stage => {
             stage.items?.forEach(item => {
                 totalTasks++;
                 if (item.completed) completedTasks++;
+
+                // Collect assigned tasks
+                if (item.assignedTo?.includes(clientRecord.id)) {
+                    myTasks.push({
+                        ...item,
+                        subProjectName: sub.name,
+                        stageName: stage.name,
+                        subProjectId: sub.id,
+                        subProjectContent: sub.content // Needed for approval updates
+                    });
+                }
             });
         });
     });
+
+    // Sort: Pending first, then by Due Date (asc), then Completed
+    myTasks.sort((a, b) => {
+        if (a.completed === b.completed) {
+            if (!a.dueDate) return 1;
+            if (!b.dueDate) return -1;
+            return new Date(a.dueDate) - new Date(b.dueDate);
+        }
+        return a.completed ? 1 : -1;
+    });
+
     const overallProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
     // Decrypt credentials for display
@@ -83,6 +110,41 @@ export default async function ClientProjectDetailsPage({ params }) {
         ...cred,
         password: cred.password ? decrypt(cred.password) : ''
     }));
+
+    // Fetch Project Owner Client Name if different from current user (or just use project.clientId to find name)
+    let projectClientName = clientRecord.name;
+    if (project.clientId && project.clientId !== clientRecord.id) {
+        const ownerClient = await db.query.clients.findFirst({
+            where: eq(clients.id, project.clientId),
+            columns: { name: true }
+        });
+        if (ownerClient) projectClientName = ownerClient.name;
+    } else if (!project.clientId) {
+        projectClientName = 'Geral';
+    }
+
+    // Fetch all clients associated with the project (for displaying other assignees)
+    const associatedClients = [];
+    if (project.clientId) {
+        const ownerClient = await db.query.clients.findFirst({
+            where: eq(clients.id, project.clientId),
+            columns: { id: true, name: true }
+        });
+        if (ownerClient) associatedClients.push(ownerClient);
+    }
+    
+    const linkedClients = await db.query.projectClients.findMany({
+        where: eq(projectClients.projectId, id),
+        with: {
+            client: true
+        }
+    });
+    
+    linkedClients.forEach(pc => {
+        if (pc.client && !associatedClients.find(c => c.id === pc.client.id)) {
+            associatedClients.push({ id: pc.client.id, name: pc.client.name });
+        }
+    });
 
     return (
         <main className="w-full px-6 py-8">
@@ -96,7 +158,7 @@ export default async function ClientProjectDetailsPage({ params }) {
                 </Link>
             </div>
 
-            <div className="grid lg:grid-cols-12 gap-8 items-start">
+            <section className="grid lg:grid-cols-12 gap-8 items-start">
                 
                 {/* Main Content (Left) - Project Management */}
                 <div className="lg:col-span-9 space-y-10 order-2 lg:order-1">
@@ -127,13 +189,162 @@ export default async function ClientProjectDetailsPage({ params }) {
                         </div>
                     </div>
 
+                    {/* My Tasks Section */}
+                    {myTasks.length > 0 && (
+                        <CollapsibleSection
+                            id={`mytasks-${id}`}
+                            title="Minhas Tarefas"
+                            icon={<CheckSquare />}
+                            defaultOpen={true}
+                            className="border-primary/20"
+                            headerRight={
+                                <div className="flex gap-2">
+                                    <span className="bg-primary text-white text-xs font-bold px-3 py-1 rounded-full" title="Pendentes">
+                                        {myTasks.filter(t => !t.completed).length}
+                                    </span>
+                                    <span className="bg-white/10 text-text-muted text-xs font-bold px-3 py-1 rounded-full" title="Total">
+                                        {myTasks.length}
+                                    </span>
+                                </div>
+                            }
+                        >
+                            <div className="bg-gradient-to-br from-primary/5 to-transparent">
+                                <div className="p-5 border-b border-primary/10">
+                                    <p className="text-sm text-text-muted">
+                                        Acompanhe todas as tarefas atribuídas a você.
+                                    </p>
+                                </div>
+                                <div className="divide-y divide-primary/10 max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
+                                    {myTasks.map((task, idx) => (
+                                        <div 
+                                            key={`${task.id}-${idx}`} 
+                                            className={`p-4 transition-colors flex items-start gap-4 group ${
+                                                task.completed ? 'hover:bg-white/5 opacity-60' : 'hover:bg-white/10 bg-white/5'
+                                            }`}
+                                        >
+                                            <div className="mt-1">
+                                                <form action={async () => {
+                                                    'use server';
+                                                    const newContent = JSON.parse(JSON.stringify(task.subProjectContent));
+                                                    let found = false;
+                                                    if (newContent.stages) {
+                                                        for (const stage of newContent.stages) {
+                                                            if (stage.items) {
+                                                                for (const item of stage.items) {
+                                                                    if (item.id === task.id) {
+                                                                        item.completed = !item.completed;
+                                                                        found = true;
+                                                                        break;
+                                                                    }
+                                                                }
+                                                            }
+                                                            if (found) break;
+                                                        }
+                                                    }
+                                                    if (found) {
+                                                        await updateSubProjectContent(task.subProjectId, newContent, id);
+                                                    }
+                                                }}>
+                                                    <button type="submit" className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
+                                                        task.completed 
+                                                            ? 'border-emerald-500 bg-emerald-500/20' 
+                                                            : 'border-primary/40 hover:border-primary hover:bg-primary/20'
+                                                    }`} title={task.completed ? "Marcar como pendente" : "Marcar como concluído"}>
+                                                        {task.completed ? (
+                                                            <div className="w-3 h-3 bg-emerald-500 rounded-sm"></div>
+                                                        ) : (
+                                                            <div className="w-3 h-3 bg-primary rounded-sm opacity-0 hover:opacity-50 transition-opacity"></div>
+                                                        )}
+                                                    </button>
+                                                </form>
+                                            </div>
+                                            <a href={`#task-${task.id}`} className="flex-1 min-w-0 group-hover:cursor-pointer">
+                                                <div className="flex justify-between items-start">
+                                                    <h3 className={`font-medium transition-colors ${
+                                                        task.completed 
+                                                            ? 'text-text-muted line-through decoration-white/20' 
+                                                            : 'text-white group-hover:text-primary'
+                                                    }`}>
+                                                        {task.text}
+                                                    </h3>
+                                                    <div className="flex items-center gap-2">
+                                                        {task.dueDate && !task.completed && (
+                                                            <span className={`text-xs font-mono flex items-center gap-1.5 ${
+                                                                new Date(task.dueDate) < new Date() ? 'text-red-400 font-bold' : 'text-gray-400'
+                                                            }`}>
+                                                                <Clock size={12} />
+                                                                {new Date(task.dueDate).toLocaleDateString('pt-BR')}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2 mt-1 text-xs text-text-muted">
+                                                    <span className={`px-2 py-0.5 rounded border ${
+                                                        task.completed ? 'bg-white/5 border-white/5' : 'bg-black/20 border-white/10'
+                                                    }`}>
+                                                        {task.subProjectName}
+                                                    </span>
+                                                    <span>›</span>
+                                                    <span>{task.stageName}</span>
+                                                </div>
+                                                {task.description && (
+                                                    <p className="text-sm text-gray-500 mt-2 line-clamp-2">
+                                                        {task.description}
+                                                    </p>
+                                                )}
+                                            </a>
+                                            {!task.completed && (
+                                                <div className="flex items-center self-center">
+                                                    <form action={async () => {
+                                                        'use server';
+                                                        const newContent = JSON.parse(JSON.stringify(task.subProjectContent));
+                                                        let found = false;
+                                                        if (newContent.stages) {
+                                                            for (const stage of newContent.stages) {
+                                                                if (stage.items) {
+                                                                    for (const item of stage.items) {
+                                                                        if (item.id === task.id) {
+                                                                            item.completed = true;
+                                                                            found = true;
+                                                                            break;
+                                                                        }
+                                                                    }
+                                                                }
+                                                                if (found) break;
+                                                            }
+                                                        }
+                                                        if (found) {
+                                                            await updateSubProjectContent(task.subProjectId, newContent, id);
+                                                        }
+                                                    }}>
+                                                        <button 
+                                                            type="submit"
+                                                            className="px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 hover:border-primary/50 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1 shadow-lg shadow-primary/5"
+                                                            title="Concluir esta tarefa"
+                                                        >
+                                                            <span>✓</span> Concluir
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </CollapsibleSection>
+                    )}
+
                     {/* Gantt Chart Section */}
-                    <div className="border-t border-white/5 pt-8">
-                         <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                            <span>📅</span> Cronograma
-                        </h2>
-                        <GanttChart subProjects={projectSubProjects} />
-                    </div>
+                    <CollapsibleSection
+                        id={`gantt-${id}`}
+                        title="Cronograma"
+                        icon={<Calendar />}
+                        defaultOpen={true}
+                    >
+                        <div className="p-6">
+                            <GanttChart subProjects={projectSubProjects} />
+                        </div>
+                    </CollapsibleSection>
 
                     {/* Phases Section */}
                     <section className="border-t border-white/5 pt-8">
@@ -145,7 +356,16 @@ export default async function ClientProjectDetailsPage({ params }) {
                         <div className="space-y-6">
                             {projectSubProjects.length > 0 ? (
                                 projectSubProjects.map(sub => (
-                                    <SubProjectCard key={sub.id} subProject={sub} projectId={id} readOnly={true} />
+                                    <SubProjectCard 
+                                        key={sub.id} 
+                                        subProject={sub} 
+                                        projectId={id} 
+                                        readOnly={true} 
+                                        projectName={project.name}
+                                        clientName={projectClientName}
+                                        currentClientId={clientRecord.id}
+                                        availableClients={associatedClients}
+                                    />
                                 ))
                             ) : (
                                 <div className="p-20 text-center text-text-muted bg-surface/50 rounded-3xl border border-white/5 border-dashed">
@@ -162,10 +382,38 @@ export default async function ClientProjectDetailsPage({ params }) {
 
                 {/* Sidebar (Right) - Links & Quick Info */}
                 <aside className="lg:col-span-3 space-y-6 sticky top-28 z-30 order-1 lg:order-2">
+                    {/* Files Section */}
+                    <CollapsibleSection
+                        id={`files-${id}`}
+                        title="Arquivos"
+                        icon={<FileText />}
+                        defaultOpen={false}
+                        className="bg-surface/30"
+                    >
+                        <ProjectFiles 
+                            title=""
+                            initialFiles={project.files}
+                            projectId={id}
+                            projectName={project.name}
+                            clientName={projectClientName}
+                            readOnly={false}
+                            onSave={async (files) => {
+                                'use server';
+                                await updateProjectFiles(id, files);
+                            }}
+                        />
+                    </CollapsibleSection>
+
                     {/* Links Section */}
-                    <div className="bg-surface/30 rounded-2xl border border-white/5 overflow-hidden">
+                    <CollapsibleSection
+                        id={`links-${id}`}
+                        title="Links"
+                        icon={<LinkIcon />}
+                        defaultOpen={false}
+                        className="bg-surface/30"
+                    >
                         <ProjectLinks 
-                            title="Documentação e Links"
+                            title=""
                             initialLinks={project.links}
                             readOnly={false}
                             onSave={async (links) => {
@@ -173,12 +421,18 @@ export default async function ClientProjectDetailsPage({ params }) {
                                 await updateProjectLinks(id, links);
                             }}
                         />
-                    </div>
+                    </CollapsibleSection>
 
                     {/* Credentials Section */}
-                    <div className="bg-surface/30 rounded-2xl border border-white/5 overflow-hidden">
+                    <CollapsibleSection
+                        id={`creds-${id}`}
+                        title="Acessos"
+                        icon={<Key />}
+                        defaultOpen={false}
+                        className="bg-surface/30"
+                    >
                         <ProjectCredentials 
-                            title="Acessos e Senhas"
+                            title=""
                             initialCredentials={decryptedCredentials}
                             readOnly={false}
                             onSave={async (creds) => {
@@ -186,7 +440,7 @@ export default async function ClientProjectDetailsPage({ params }) {
                                 await updateProjectCredentials(id, creds);
                             }}
                         />
-                    </div>
+                    </CollapsibleSection>
                     
                     {/* Minimal Progress Card for Sidebar */}
                     <div className="bg-surface/30 p-5 rounded-2xl border border-white/5">
@@ -206,7 +460,7 @@ export default async function ClientProjectDetailsPage({ params }) {
                     </div>
                 </aside>
 
-            </div>
+            </section>
         </main>
     );
 }

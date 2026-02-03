@@ -5,15 +5,21 @@ import { createPortal } from 'react-dom';
 import { useSession } from 'next-auth/react';
 import { MessageSquare, Send, Calendar, Clock, DollarSign } from 'lucide-react';
 import Link from 'next/link';
+import R2Uploader from 'components/R2Uploader';
 
-export default function TaskDetailModal({ 
+export default function TaskDetailModal({  
     isOpen, 
     onClose, 
     task, 
     onSave, 
     readOnly = false,
     projectId = null,
-    subProjectId = null
+    subProjectId = null,
+    projectName = null,
+    subProjectName = null,
+    clientName = null,
+    availableClients = [],
+    currentClientId = null
 }) {
     const { data: session } = useSession();
     const [localTask, setLocalTask] = useState(task);
@@ -102,9 +108,11 @@ export default function TaskDetailModal({
     };
 
     const toggleChecklistItem = (checklistId, itemId) => {
-        // Allow clients to check items? Probably yes for collaboration, but strictly per user request "read only" might mean NO.
-        // User said: "client... apenas visualiza". So ReadOnly = NO edits.
-        if (readOnly) return;
+        // Allow clients to check items if assigned to them or if not readOnly
+        const isAssignedToMe = (currentClientId && (localTask.assignedTo || []).includes(currentClientId)) || 
+                               (session?.user?.id && (localTask.assignedTo || []).includes(session.user.id));
+        
+        if (readOnly && !isAssignedToMe) return;
         
         setLocalTask(prev => ({
             ...prev,
@@ -151,11 +159,44 @@ export default function TaskDetailModal({
         setNewAttachmentName('');
     };
 
-    const removeAttachment = (id) => {
+    const removeAttachment = async (id) => {
         if (readOnly) return;
+        
+        const attachment = localTask.attachments.find(a => a.id === id);
+        
+        // If it's a file (uploaded to R2), try to delete it from bucket
+        if (attachment && attachment.type === 'file' && attachment.url) {
+            try {
+                await fetch('/api/upload/delete', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: attachment.url })
+                });
+            } catch (err) {
+                console.error("Erro ao deletar arquivo do bucket:", err);
+            }
+        }
+
         setLocalTask(prev => ({
             ...prev,
             attachments: (prev.attachments || []).filter(a => a.id !== id)
+        }));
+    };
+
+    const toggleClientAssignment = (clientId) => {
+        if (readOnly) return;
+        const currentAssignments = localTask.assignedTo || [];
+        let newAssignments;
+        
+        if (currentAssignments.includes(clientId)) {
+            newAssignments = currentAssignments.filter(id => id !== clientId);
+        } else {
+            newAssignments = [...currentAssignments, clientId];
+        }
+        
+        setLocalTask(prev => ({
+            ...prev,
+            assignedTo: newAssignments
         }));
     };
 
@@ -166,14 +207,16 @@ export default function TaskDetailModal({
                 {/* Header */}
                 <div className="p-6 border-b border-white/10 flex justify-between items-start bg-white/5">
                     <div className="flex-1 mr-4">
-                        <input
-                            type="text"
-                            value={localTask.text || ''}
-                            onChange={(e) => updateField('text', e.target.value)}
-                            disabled={readOnly}
-                            className="w-full bg-transparent text-2xl font-bold text-white border-none focus:ring-0 p-0 placeholder-white/30"
-                            placeholder="Título da Tarefa"
-                        />
+                        <div className="flex items-center gap-4">
+                            <input
+                                type="text"
+                                value={localTask.text || ''}
+                                onChange={(e) => updateField('text', e.target.value)}
+                                disabled={readOnly}
+                                className="flex-1 bg-transparent text-2xl font-bold text-white border-none focus:ring-0 p-0 placeholder-white/30"
+                                placeholder="Título da Tarefa"
+                            />
+                        </div>
                         <div className="text-sm text-text-muted mt-1">
                             Na lista: <span className="text-primary">Sub-projeto atual</span>
                         </div>
@@ -233,6 +276,33 @@ export default function TaskDetailModal({
                         </div>
                     </div>
 
+                    {/* Assigned Clients - New Section */}
+                    {!readOnly && availableClients.length > 0 && (
+                        <div className="space-y-3 pt-4 border-t border-white/10">
+                             <h3 className="text-sm font-semibold text-text-muted flex items-center gap-2 uppercase tracking-wider">
+                                👥 Responsáveis / Clientes
+                            </h3>
+                            <div className="flex flex-wrap gap-2">
+                                {availableClients.map(client => {
+                                    const isAssigned = (localTask.assignedTo || []).includes(client.id);
+                                    return (
+                                        <button
+                                            key={client.id}
+                                            onClick={() => toggleClientAssignment(client.id)}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center gap-2 ${
+                                                isAssigned 
+                                                ? 'bg-primary text-white border-primary shadow-[0_0_10px_rgba(255,107,0,0.3)]' 
+                                                : 'bg-white/5 text-gray-400 border-white/10 hover:border-white/20 hover:text-white'
+                                            }`}
+                                        >
+                                            {isAssigned ? '✓' : '+'} {client.name}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Finance Actions */}
                     {!readOnly && projectId && (
                         <div className="pt-4 border-t border-white/10">
@@ -280,8 +350,12 @@ export default function TaskDetailModal({
                                                 type="checkbox"
                                                 checked={item.completed}
                                                 onChange={() => toggleChecklistItem(checklist.id, item.id)}
-                                                disabled={readOnly}
-                                                className="rounded bg-black/20 border-white/10 text-primary focus:ring-primary/50"
+                                                disabled={readOnly && !((currentClientId && (localTask.assignedTo || []).includes(currentClientId)) || (session?.user?.id && (localTask.assignedTo || []).includes(session.user.id)))}
+                                                className={`rounded bg-black/20 border-white/10 text-primary focus:ring-primary/50 ${
+                                                    readOnly && !((currentClientId && (localTask.assignedTo || []).includes(currentClientId)) || (session?.user?.id && (localTask.assignedTo || []).includes(session.user.id)))
+                                                    ? 'cursor-not-allowed opacity-50' 
+                                                    : 'cursor-pointer'
+                                                }`}
                                             />
                                             <span className={`flex-1 text-sm ${item.completed ? 'line-through text-text-muted' : 'text-gray-300'}`}>
                                                 {item.text}
@@ -367,35 +441,66 @@ export default function TaskDetailModal({
                             ))}
                         </div>
 
-                        {!readOnly && (
-                            <div className="bg-white/5 rounded-lg p-4 border border-dashed border-white/10 mt-2">
-                                <div className="flex flex-col gap-2">
-                                    <input
-                                        type="text"
-                                        value={newAttachmentName}
-                                        onChange={(e) => setNewAttachmentName(e.target.value)}
-                                        placeholder="Nome do anexo (opcional)"
-                                        className="bg-black/20 border border-white/10 rounded px-3 py-2 text-sm text-white focus:border-primary/50"
-                                    />
-                                    <div className="flex gap-2">
-                                        <input
-                                            type="url"
-                                            value={newAttachmentUrl}
-                                            onChange={(e) => setNewAttachmentUrl(e.target.value)}
-                                            placeholder="Cole o link aqui (Google Drive, Figma, etc)..."
-                                            className="flex-1 bg-black/20 border border-white/10 rounded px-3 py-2 text-sm text-white focus:border-primary/50"
+                        {/* Upload Section - Always visible for authenticated users */}
+                        <div className="bg-white/5 rounded-lg p-4 border border-dashed border-white/10 mt-2">
+                            <div className="flex flex-col gap-2">
+                                <div className="mb-2">
+                                        <label className="block text-xs text-text-muted mb-1">Upload de Arquivo</label>
+                                        <R2Uploader 
+                                            folderPath={
+                                                clientName && projectName && subProjectName 
+                                                ? `${clientName}/${projectName}/${subProjectName}` 
+                                                : projectName && subProjectName 
+                                                    ? `${projectName}/${subProjectName}`
+                                                    : (projectName || 'uploads')
+                                            }
+                                            onUploadComplete={(url, fileName) => {
+                                                // Auto-attach upon upload completion
+                                                const newAttachment = {
+                                                    id: crypto.randomUUID(),
+                                                    name: fileName,
+                                                    url: url,
+                                                    type: 'file'
+                                                };
+                                                setLocalTask(prev => ({
+                                                    ...prev,
+                                                    attachments: [...(prev.attachments || []), newAttachment]
+                                                }));
+                                                // Clear inputs just in case
+                                                setNewAttachmentUrl('');
+                                                setNewAttachmentName('');
+                                            }}
                                         />
-                                        <button
-                                            onClick={addAttachment}
-                                            disabled={!newAttachmentUrl.trim()}
-                                            className="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary border border-primary/20 rounded text-sm transition-colors disabled:opacity-50"
-                                        >
-                                            Anexar
-                                        </button>
                                     </div>
+
+                                <div className="border-t border-white/5 my-2"></div>
+                                
+                                <label className="block text-xs text-text-muted">Ou adicione um link manualmente</label>
+                                <input
+                                    type="text"
+                                    value={newAttachmentName}
+                                    onChange={(e) => setNewAttachmentName(e.target.value)}
+                                    placeholder="Nome do anexo (opcional)"
+                                    className="bg-black/20 border border-white/10 rounded px-3 py-2 text-sm text-white focus:border-primary/50"
+                                />
+                                <div className="flex gap-2">
+                                    <input
+                                        type="url"
+                                        value={newAttachmentUrl}
+                                        onChange={(e) => setNewAttachmentUrl(e.target.value)}
+                                        placeholder="Cole o link aqui (Google Drive, Figma, etc)..."
+                                        className="flex-1 bg-black/20 border border-white/10 rounded px-3 py-2 text-sm text-white focus:border-primary/50"
+                                    />
+                                    <button
+                                        onClick={addAttachment}
+                                        disabled={!newAttachmentUrl.trim()}
+                                        className="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary border border-primary/20 rounded text-sm transition-colors disabled:opacity-50"
+                                    >
+                                        Anexar
+                                    </button>
                                 </div>
                             </div>
-                        )}
+                        </div>
                     </div>
 
                     {/* Comments Section - Trello Style */}
@@ -491,7 +596,7 @@ export default function TaskDetailModal({
                         >
                             Fechar
                         </button>
-                        {!readOnly && (
+                        {(!readOnly || ((currentClientId && (localTask.assignedTo || []).includes(currentClientId)) || (session?.user?.id && (localTask.assignedTo || []).includes(session.user.id)))) && (
                             <button 
                                 onClick={handleSave}
                                 className="px-6 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium shadow-lg shadow-primary/20 transition-all"
