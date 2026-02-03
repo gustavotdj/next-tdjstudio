@@ -20,11 +20,13 @@ export async function createClient(formData) {
     const name = formData.get('name');
     const email = formData.get('email');
     const phone = formData.get('phone');
+    const avatar = formData.get('avatar');
     
     await db.insert(clients).values({
         name,
         email,
         phone,
+        avatar,
     });
     
     revalidatePath('/admin/clients');
@@ -36,12 +38,14 @@ export async function updateClient(id, formData) {
     const name = formData.get('name');
     const email = formData.get('email');
     const phone = formData.get('phone');
+    const avatar = formData.get('avatar');
     
     await db.update(clients)
         .set({
             name,
             email,
             phone,
+            avatar,
             updatedAt: new Date()
         })
         .where(eq(clients.id, id));

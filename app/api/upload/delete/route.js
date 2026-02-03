@@ -1,4 +1,4 @@
-import { r2, R2_BUCKET_NAME } from 'lib/r2';
+import { getR2Client, R2_BUCKET_NAME } from 'lib/r2';
 import { DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getServerSession } from 'next-auth';
 import { authOptions } from 'app/api/auth/[...nextauth]/route';
@@ -34,7 +34,8 @@ export async function DELETE(request) {
 
     console.log(`Deleting file from R2. Key: ${key}`);
 
-    await r2.send(new DeleteObjectCommand({
+    const client = getR2Client();
+    await client.send(new DeleteObjectCommand({
       Bucket: R2_BUCKET_NAME,
       Key: key,
     }));

@@ -5,6 +5,7 @@ import { updateClient } from 'app/actions/client-actions';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import DeleteClientButton from '../../_components/delete-client-button';
+import AvatarPicker from 'components/ui/AvatarPicker';
 
 export default async function EditClientPage({ params }) {
     const { id } = await params;
@@ -30,6 +31,11 @@ export default async function EditClientPage({ params }) {
             </div>
 
             <form action={updateClient.bind(null, id)} className="space-y-6 bg-surface p-8 rounded-xl border border-white/5">
+                <div className="space-y-2">
+                    <label className="text-sm text-gray-400">Avatar</label>
+                    <AvatarPicker initialValue={client.avatar} clientName={client.name} />
+                </div>
+
                 <div className="space-y-2">
                     <label htmlFor="name" className="text-sm text-gray-400">Nome do Cliente</label>
                     <input 

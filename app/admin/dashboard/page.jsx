@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { DashboardCharts } from './charts'; // Client component for charts
-import { Avatar } from 'components/Avatar';
 
 import { updateSubProjectContent } from 'app/actions/project-actions';
 

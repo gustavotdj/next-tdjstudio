@@ -5,6 +5,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from 'app/api/auth/[...nextauth]/route';
 import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
+import ClientAvatar from 'components/ui/ClientAvatar';
 
 export default async function AdminClientDetailsPage({ params }) {
     const session = await getServerSession(authOptions);
@@ -46,11 +47,14 @@ export default async function AdminClientDetailsPage({ params }) {
                     <span>←</span> Voltar para Clientes
                 </Link>
                 <div className="flex justify-between items-start">
-                    <div>
-                        <h1 className="text-4xl font-bold text-white mb-2">{client.name}</h1>
-                        <div className="flex gap-4 text-text-muted">
-                            <span className="flex items-center gap-2">✉️ {client.email}</span>
-                            {client.phone && <span className="flex items-center gap-2">📱 {client.phone}</span>}
+                    <div className="flex gap-6 items-center">
+                        <ClientAvatar seed={client.avatar} size="w-24 h-24" className="shadow-2xl border-4 border-surface" />
+                        <div>
+                            <h1 className="text-4xl font-bold text-white mb-2">{client.name}</h1>
+                            <div className="flex gap-4 text-text-muted">
+                                <span className="flex items-center gap-2">✉️ {client.email}</span>
+                                {client.phone && <span className="flex items-center gap-2">📱 {client.phone}</span>}
+                            </div>
                         </div>
                     </div>
                     <div className="flex gap-4">

@@ -75,6 +75,7 @@ export const clients = pgTable("clients", {
     name: text("name").notNull(),
     email: text("email"),
     phone: text("phone"),
+    avatar: text("avatar"),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
 });

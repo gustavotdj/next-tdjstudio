@@ -14,6 +14,9 @@ import GanttChart from 'components/projects/GanttChart';
 import CollapsibleSection from 'components/ui/CollapsibleSection';
 import { updateProjectLinks, updateProjectCredentials, updateProjectFiles, updateSubProjectContent } from 'app/actions/project-actions';
 import { decrypt } from 'lib/crypto';
+import { TaskNavigationProvider } from 'components/projects/TaskNavigationContext';
+import TaskLink from 'components/projects/TaskLink';
+import TaskHashNavigator from 'components/projects/TaskHashNavigator';
 
 export default async function ClientProjectDetailsPage({ params }) {
     const session = await getServerSession(authOptions);
@@ -147,7 +150,9 @@ export default async function ClientProjectDetailsPage({ params }) {
     });
 
     return (
-        <main className="w-full px-6 py-8">
+        <TaskNavigationProvider>
+            <TaskHashNavigator subProjects={projectSubProjects} />
+            <main className="w-full px-6 py-8">
             {/* Back Link */}
             <div className="mb-6">
                 <Link 
@@ -218,6 +223,7 @@ export default async function ClientProjectDetailsPage({ params }) {
                                     {myTasks.map((task, idx) => (
                                         <div 
                                             key={`${task.id}-${idx}`} 
+                                            data-task-id={task.id}
                                             className={`p-4 transition-colors flex items-start gap-4 group ${
                                                 task.completed ? 'hover:bg-white/5 opacity-60' : 'hover:bg-white/10 bg-white/5'
                                             }`}
@@ -258,7 +264,11 @@ export default async function ClientProjectDetailsPage({ params }) {
                                                     </button>
                                                 </form>
                                             </div>
-                                            <a href={`#task-${task.id}`} className="flex-1 min-w-0 group-hover:cursor-pointer">
+                                            <TaskLink 
+                                                taskId={task.id} 
+                                                subProjectId={task.subProjectId}
+                                                className="flex-1 min-w-0 group-hover:cursor-pointer"
+                                            >
                                                 <div className="flex justify-between items-start">
                                                     <h3 className={`font-medium transition-colors ${
                                                         task.completed 
@@ -292,7 +302,7 @@ export default async function ClientProjectDetailsPage({ params }) {
                                                         {task.description}
                                                     </p>
                                                 )}
-                                            </a>
+                                            </TaskLink>
                                             {!task.completed && (
                                                 <div className="flex items-center self-center">
                                                     <form action={async () => {
@@ -462,5 +472,6 @@ export default async function ClientProjectDetailsPage({ params }) {
 
             </section>
         </main>
+        </TaskNavigationProvider>
     );
 }

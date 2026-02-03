@@ -16,6 +16,7 @@ import ProjectFiles from 'components/projects/ProjectFiles';
 import FileManager from 'components/admin/FileManager';
 import { normalizePath } from 'lib/utils';
 import { TaskNavigationProvider } from 'components/projects/TaskNavigationContext';
+import TaskHashNavigator from 'components/projects/TaskHashNavigator';
 import CollapsibleSection from 'components/ui/CollapsibleSection';
 import CreateSubProjectForm from 'components/projects/CreateSubProjectForm';
 
@@ -98,6 +99,7 @@ export default async function AdminProjectDetailsPage({ params }) {
 
     return (
         <TaskNavigationProvider>
+            <TaskHashNavigator subProjects={projectSubProjects} />
             <main className="w-full px-4 py-6 md:px-6 md:py-8">
                 {/* Header / Back Link */}
             <div className="mb-8">

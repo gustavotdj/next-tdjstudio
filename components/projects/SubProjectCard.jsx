@@ -31,12 +31,6 @@ export default function SubProjectCard({ subProject, projectId, readOnly = false
                 if (iIdx !== -1) {
                     setEditingItem({ sIdx, iIdx });
                     setIsExpanded(true);
-                    
-                    // Optional: scroll into view logic if needed, but opening modal is primary
-                    const element = document.getElementById(`task-${openTaskRequest.taskId}`);
-                    if (element) {
-                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
 
                     if (clearRequest) clearRequest();
                     break;
@@ -531,7 +525,7 @@ export default function SubProjectCard({ subProject, projectId, readOnly = false
                                                 <tr 
                                                     key={item.id} 
                                                     onClick={() => handleOpenItem(sIdx, iIdx)}
-                                                    id={`task-${item.id}`} 
+                                                    data-task-id={item.id} 
                                                     className={`group hover:bg-white/5 cursor-pointer transition-colors ${
                                                         isAssignedToMe ? 'bg-primary/5 hover:bg-primary/10' : ''
                                                     }`}
@@ -752,7 +746,7 @@ export default function SubProjectCard({ subProject, projectId, readOnly = false
                                             return (
                                             <div 
                                                 key={item.id}
-                                                id={`task-${item.id}`} 
+                                                data-task-id={item.id} 
                                                 className={`p-3 rounded border transition-colors group ${
                                                     !readOnly ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
                                                 } ${

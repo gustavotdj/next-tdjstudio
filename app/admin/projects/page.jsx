@@ -5,9 +5,9 @@ import { authOptions } from 'app/api/auth/[...nextauth]/route';
 import { redirect } from 'next/navigation';
 import { eq, desc } from 'drizzle-orm';
 import Link from 'next/link';
-import { Briefcase, Clock, LayoutGrid, Calendar, CheckSquare } from 'lucide-react';
+import { Briefcase, Clock, LayoutGrid, Calendar, CheckSquare, MessageSquare, ListTodo } from 'lucide-react';
 import { CreateProjectModal } from './CreateProjectModal';
-import { Avatar } from 'components/Avatar';
+import ClientAvatar from 'components/ui/ClientAvatar';
 
 export default async function AdminProjectsPage() {
     const session = await getServerSession(authOptions);
@@ -91,22 +91,33 @@ export default async function AdminProjectsPage() {
                             </div>
                         ) : (
                             allProjects.map((project) => {
-                                // Calculate simple progress based on subprojects/phases just for visual indication
-                                const phaseCount = project.subProjects.length;
-                                
+                                // Calculate Metrics
                                 let totalTasks = 0;
                                 let completedTasks = 0;
+                                let totalComments = 0;
+                                const pendingTasksList = [];
                                 
                                 project.subProjects.forEach(sub => {
                                     if (sub.content?.stages) {
                                         sub.content.stages.forEach(stage => {
                                             if (stage.items) {
-                                                totalTasks += stage.items.length;
-                                                completedTasks += stage.items.filter(i => i.completed).length;
+                                                stage.items.forEach(item => {
+                                                    totalTasks++;
+                                                    if (item.completed) {
+                                                        completedTasks++;
+                                                    } else {
+                                                        pendingTasksList.push(item);
+                                                    }
+                                                    if (item.comments) {
+                                                        totalComments += item.comments.length;
+                                                    }
+                                                });
                                             }
                                         });
                                     }
                                 });
+
+                                const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
                                 return (
                                 <div key={project.id} className="bg-surface p-5 rounded-xl border border-white/5 hover:border-primary/30 transition-all shadow-lg hover:shadow-xl hover:shadow-primary/5 group relative flex flex-col h-full">
@@ -128,7 +139,7 @@ export default async function AdminProjectsPage() {
                                         <div className="flex -space-x-2 overflow-hidden">
                                             {project.clients?.slice(0, 3).map(pc => (
                                                 <div key={pc.client.id} title={pc.client.name} className="ring-2 ring-[#121212] rounded-full">
-                                                    <Avatar seed={pc.client.email || pc.client.name} size={24} />
+                                                    <ClientAvatar seed={pc.client.avatar || pc.client.email || pc.client.name} size="w-6 h-6" />
                                                 </div>
                                             ))}
                                             {(project.clients?.length || 0) > 3 && (
@@ -143,36 +154,66 @@ export default async function AdminProjectsPage() {
                                         <h3 className="text-xl font-bold text-white line-clamp-1">{project.name}</h3>
                                     </Link>
                                     
-                                    <p className="text-text-muted text-xs mb-4 line-clamp-2 leading-relaxed flex-1">
+                                    <p className="text-text-muted text-xs mb-4 line-clamp-2 leading-relaxed min-h-[40px]">
                                         {project.description || 'Sem descrição definida para este projeto.'}
                                     </p>
                                     
-                                    <div className="flex items-center gap-4 text-xs text-text-muted mb-4 bg-white/5 p-2 rounded-lg">
-                                        <div className="flex items-center gap-1.5" title={`${completedTasks} de ${totalTasks} tarefas concluídas`}>
-                                            <CheckSquare size={14} className={totalTasks > 0 && totalTasks === completedTasks ? "text-emerald-400" : "text-primary"} />
-                                            <span>{completedTasks}/{totalTasks} tarefas</span>
+                                    {/* Stats Bar */}
+                                    <div className="mb-4">
+                                        <div className="flex justify-between text-xs mb-1.5">
+                                            <span className="text-text-muted font-medium">Progresso</span>
+                                            <span className={progress === 100 ? "text-emerald-400 font-bold" : "text-white font-bold"}>{progress}%</span>
                                         </div>
-                                        <div className="w-px h-3 bg-white/10"></div>
-                                        <div className="flex items-center gap-1.5">
-                                            <Calendar size={14} />
-                                            <span>{new Date(project.createdAt).toLocaleDateString('pt-BR')}</span>
+                                        <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                            <div 
+                                                className={`h-full rounded-full transition-all duration-500 ${
+                                                    progress === 100 ? 'bg-emerald-500' : 'bg-primary'
+                                                }`}
+                                                style={{ width: `${progress}%` }}
+                                            />
                                         </div>
                                     </div>
 
-                                    <div className="pt-4 border-t border-white/5 flex gap-2">
-                                        <Link 
-                                            href={`/admin/projects/${project.id}`} 
-                                            className="flex-1 text-center text-sm font-bold text-white bg-white/5 hover:bg-primary hover:text-white py-2 rounded-lg transition-all border border-white/5 hover:border-primary/50"
-                                        >
-                                            Gerenciar
-                                        </Link>
-                                        <Link 
-                                            href={`/admin/projects/${project.id}/edit`} 
-                                            className="p-2 text-text-muted hover:text-white hover:bg-white/10 rounded-lg transition-all border border-transparent hover:border-white/10" 
-                                            title="Configurações"
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                                        </Link>
+                                    {/* Pending Tasks Preview */}
+                                    {pendingTasksList.length > 0 && (
+                                        <div className="mb-4 bg-white/5 rounded-lg p-3 border border-white/5">
+                                            <div className="flex items-center gap-2 text-xs text-text-muted mb-2 font-bold uppercase tracking-wider">
+                                                <ListTodo size={12} />
+                                                Próximas Tarefas
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                {pendingTasksList.slice(0, 3).map((task, idx) => (
+                                                    <div key={idx} className="flex items-start gap-2 text-xs text-gray-300">
+                                                        <div className="w-1 h-1 rounded-full bg-primary mt-1.5 shrink-0" />
+                                                        <span className="line-clamp-1">{task.text || task.title}</span>
+                                                    </div>
+                                                ))}
+                                                {pendingTasksList.length > 3 && (
+                                                    <div className="text-[10px] text-text-muted pl-3">
+                                                        + {pendingTasksList.length - 3} outras tarefas...
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    <div className="mt-auto flex items-center justify-between text-xs text-text-muted pt-3 border-t border-white/5">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-1.5" title={`${completedTasks} de ${totalTasks} tarefas concluídas`}>
+                                                <CheckSquare size={14} className={totalTasks > 0 && totalTasks === completedTasks ? "text-emerald-400" : "text-primary"} />
+                                                <span>{completedTasks}/{totalTasks}</span>
+                                            </div>
+                                            {totalComments > 0 && (
+                                                <div className="flex items-center gap-1.5 text-blue-400" title={`${totalComments} comentários`}>
+                                                    <MessageSquare size={14} />
+                                                    <span>{totalComments}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <Calendar size={14} />
+                                            <span>{project.updatedAt ? new Date(project.updatedAt).toLocaleDateString('pt-BR') : '-'}</span>
+                                        </div>
                                     </div>
                                 </div>
                                 );

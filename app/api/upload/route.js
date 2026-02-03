@@ -1,4 +1,4 @@
-import { r2, R2_BUCKET_NAME, R2_PUBLIC_URL } from 'lib/r2';
+import { getR2Client, R2_BUCKET_NAME, R2_PUBLIC_URL } from 'lib/r2';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { getServerSession } from 'next-auth';
@@ -40,13 +40,25 @@ export async function POST(request) {
     }
 
     // Generate Presigned URL
+    let client;
+    try {
+      client = getR2Client();
+    } catch (err) {
+      console.error('R2 Client Error:', err.message);
+      return NextResponse.json({ error: `Storage Configuration Error: ${err.message}` }, { status: 500 });
+    }
+
+    if (!R2_BUCKET_NAME) {
+      console.error('R2_BUCKET_NAME is not defined');
+      return NextResponse.json({ error: 'Storage Configuration Error: Bucket name missing' }, { status: 500 });
+    }
+
     const signedUrl = await getSignedUrl(
-      r2,
+      client,
       new PutObjectCommand({
         Bucket: R2_BUCKET_NAME,
         Key: key,
         ContentType: contentType,
-        // ACL: 'public-read', 
       }),
       { expiresIn: 3600 } // URL valid for 1 hour
     );
@@ -54,10 +66,10 @@ export async function POST(request) {
     return NextResponse.json({
       url: signedUrl,
       filename: uniqueFilename,
-      publicUrl: `${R2_PUBLIC_URL}/${key}`
+      publicUrl: `${R2_PUBLIC_URL || ''}/${key}`
     });
   } catch (error) {
     console.error('Error generating signed URL:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: `Upload Error: ${error.message}` }, { status: 500 });
   }
 }
