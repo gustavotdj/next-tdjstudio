@@ -66,7 +66,7 @@ export const verificationTokens = pgTable(
     })
 );
 
-// Entidades de Negócio TDJ Studio
+// Entidades de Negócio TDJs
 
 export const clients = pgTable("clients", {
     id: text("id")

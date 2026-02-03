@@ -132,10 +132,12 @@ export default function GanttChart({ subProjects }) {
         return getPosition(today);
     }, [minDate, maxDate]);
 
+    if (ganttData.length === 0) return null;
+
     return (
         <div className="bg-surface/50 rounded-2xl border border-white/5 p-6 backdrop-blur-sm overflow-hidden">
-            <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+            <div className="flex flex-wrap items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary shrink-0">
                     📅
                 </div>
                 <div>
@@ -219,7 +221,7 @@ export default function GanttChart({ subProjects }) {
                     </div>
 
                     {/* Legend */}
-                    <div className="mt-8 flex gap-6 pt-4 border-t border-white/5">
+                    <div className="mt-8 flex flex-wrap gap-6 pt-4 border-t border-white/5">
                         <div className="flex items-center gap-2">
                             <div className="w-3 h-3 rounded-full bg-primary/40 border border-primary/30"></div>
                             <span className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Planejado</span>

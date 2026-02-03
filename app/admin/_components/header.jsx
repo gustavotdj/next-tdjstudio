@@ -16,10 +16,10 @@ export function AdminHeader() {
     return (
         <nav className="flex flex-wrap items-center gap-4 py-6 px-4 md:px-8 border-b border-surface bg-background/50 backdrop-blur-md sticky top-0 z-50">
             <Link href="/admin/dashboard" className="flex items-center gap-2 font-bold text-xl text-white tracking-tight group">
-                <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary/25 group-hover:scale-105 transition-transform">
-                    <span className="text-xs font-black">ADMIN</span>
+                <div className="w-9 h-9 flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <img src="/icone-tdj.png" alt="TDJs Admin Logo" className="w-full h-full object-contain" />
                 </div>
-                <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">TDJ Admin</span>
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">TDJs Admin</span>
             </Link>
             
             <ul className="flex flex-wrap gap-x-8 gap-y-2 ml-8">

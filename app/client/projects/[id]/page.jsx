@@ -214,7 +214,7 @@ export default async function ClientProjectDetailsPage({ params }) {
                                         Acompanhe todas as tarefas atribuídas a você.
                                     </p>
                                 </div>
-                                <div className="divide-y divide-primary/10 max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
+                                <div className="divide-y divide-primary/10">
                                     {myTasks.map((task, idx) => (
                                         <div 
                                             key={`${task.id}-${idx}`} 

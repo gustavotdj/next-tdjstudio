@@ -98,7 +98,7 @@ export default async function AdminProjectDetailsPage({ params }) {
 
     return (
         <TaskNavigationProvider>
-            <main className="w-full px-6 py-8">
+            <main className="w-full px-4 py-6 md:px-6 md:py-8">
                 {/* Header / Back Link */}
             <div className="mb-8">
                 <Link 
@@ -147,7 +147,7 @@ export default async function AdminProjectDetailsPage({ params }) {
                     icon={<Calendar />}
                     defaultOpen={true}
                 >
-                    <div className="p-6">
+                    <div className="p-4 md:p-6">
                         <GanttChart subProjects={projectSubProjects} />
                     </div>
                 </CollapsibleSection>
@@ -184,7 +184,7 @@ export default async function AdminProjectDetailsPage({ params }) {
                             icon={<Folder />}
                             defaultOpen={true}
                         >
-                            <div className="p-6">
+                            <div className="p-4 md:p-6">
                                 <FileManager 
                                     initialPath={`${normalizePath(projectClientName)}/${normalizePath(project.name)}/`} 
                                     title=""
@@ -302,7 +302,7 @@ export default async function AdminProjectDetailsPage({ params }) {
                         defaultOpen={false}
                         className="bg-surface"
                     >
-                        <div className="p-6 space-y-4">
+                        <div className="p-4 md:p-6 space-y-4">
                             <div className="flex justify-between items-center">
                                 <span className="text-gray-400">Criado em</span>
                                 <span className="text-white font-mono text-sm">

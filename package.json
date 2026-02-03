@@ -31,7 +31,9 @@
     "next-auth": "^4.24.13",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "unique-names-generator": "^4.7.1"
+    "recharts": "^3.7.0",
+    "unique-names-generator": "^4.7.1",
+    "ws": "^8.19.0"
   },
   "devDependencies": {
     "@netlify/plugin-nextjs": "^5.15.7",

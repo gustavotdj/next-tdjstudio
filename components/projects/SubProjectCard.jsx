@@ -422,8 +422,93 @@ export default function SubProjectCard({ subProject, projectId, readOnly = false
                     )}
 
                     {viewMode === 'list' ? (
-                        <div className="w-full bg-surface border border-white/5 rounded-xl overflow-hidden">
-                            <table className="w-full text-left border-collapse">
+                        <>
+                            {/* Mobile List View */}
+                            <div className="md:hidden space-y-3">
+                                {stages.flatMap((stage, sIdx) => 
+                                    stage.items.map((item, iIdx) => {
+                                        const totalChecklistItems = (item.checklists || []).reduce((acc, cl) => acc + (cl.items || []).length, 0);
+                                        const completedChecklistItems = (item.checklists || []).reduce((acc, cl) => acc + (cl.items || []).filter(i => i.completed).length, 0);
+                                        const isChecklistComplete = totalChecklistItems > 0 && totalChecklistItems === completedChecklistItems;
+                                        const isAssignedToMe = currentClientId && (item.assignedTo || []).includes(currentClientId);
+
+                                        return (
+                                            <div 
+                                                key={item.id}
+                                                onClick={() => handleOpenItem(sIdx, iIdx)}
+                                                className={`p-4 rounded-lg border bg-surface space-y-3 ${
+                                                    isAssignedToMe ? 'bg-primary/5 border-primary/20' : 'border-white/5'
+                                                }`}
+                                            >
+                                                <div className="flex items-start gap-3">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={item.completed} 
+                                                        onChange={() => (isAssignedToMe || !readOnly) && handleToggleItem(sIdx, iIdx)}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        disabled={readOnly && !isAssignedToMe}
+                                                        className="mt-1 w-4 h-4 rounded bg-black/20 border-white/10 text-primary focus:ring-primary/50"
+                                                    />
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="font-medium text-white text-sm break-words">
+                                                            <span className={item.completed ? 'line-through text-text-muted' : ''}>{item.text}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-text-muted">
+                                                                {stage.name}
+                                                            </span>
+                                                            {item.dueDate && (
+                                                                <span className={`text-[10px] flex items-center gap-1 ${new Date(item.dueDate) < new Date() && !item.completed ? 'text-red-400' : 'text-text-muted'}`}>
+                                                                    <Calendar size={10} />
+                                                                    {new Date(item.dueDate).toLocaleDateString('pt-BR')}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex -space-x-1">
+                                                            {(item.assignedTo || []).map(clientId => {
+                                                                const client = availableClients.find(c => c.id === clientId);
+                                                                if (!client) return null;
+                                                                return (
+                                                                    <div key={`${clientId}-${iIdx}`} className="w-5 h-5 rounded-full bg-surface border border-white/10 flex items-center justify-center text-[8px] font-bold text-primary uppercase">
+                                                                        {client.name.substring(0, 2)}
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                        {(item.attachments?.length > 0 || item.comments?.length > 0) && (
+                                                            <div className="flex items-center gap-2 text-text-muted text-[10px]">
+                                                                {item.attachments?.length > 0 && <span className="flex items-center gap-1"><Paperclip size={10} /> {item.attachments.length}</span>}
+                                                                {item.comments?.length > 0 && <span className="flex items-center gap-1"><MessageSquare size={10} /> {item.comments.length}</span>}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    
+                                                    {totalChecklistItems > 0 && (
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-12 h-1 bg-black/20 rounded-full overflow-hidden">
+                                                                <div 
+                                                                    className={`h-full ${isChecklistComplete ? 'bg-emerald-500' : 'bg-primary'}`} 
+                                                                    style={{ width: `${(completedChecklistItems/totalChecklistItems)*100}%` }}
+                                                                />
+                                                            </div>
+                                                            <span className="text-[10px] text-text-muted">{completedChecklistItems}/{totalChecklistItems}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+
+                            {/* Desktop Table View */}
+                            <div className="hidden md:block w-full bg-surface border border-white/5 rounded-xl overflow-x-auto">
+                                <table className="w-full text-left border-collapse min-w-[800px]">
                                 <thead>
                                     <tr className="bg-white/5 border-b border-white/5 text-xs font-bold text-text-muted uppercase tracking-wider">
                                         <th className="p-4 w-1/3">Tarefa</th>
@@ -542,10 +627,11 @@ export default function SubProjectCard({ subProject, projectId, readOnly = false
                                         </tr>
                                     )}
                                 </tbody>
-                            </table>
-                        </div>
+                                </table>
+                            </div>
+                        </>
                     ) : (
-                        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                        <div className="flex flex-col md:flex-row gap-4 md:overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
                             {stages.map((stage, sIdx) => {
                                 // Calculate Stage Progress
                                 const totalStageTasks = stage.items.length;
@@ -558,7 +644,7 @@ export default function SubProjectCard({ subProject, projectId, readOnly = false
                                 return (
                                 <div 
                                     key={stage.id} 
-                                    className={`min-w-[280px] bg-surface border rounded-lg p-3 pt-5 flex flex-col transition-colors relative overflow-hidden ${
+                                    className={`w-full md:w-auto md:min-w-[280px] bg-surface border rounded-lg p-3 pt-5 flex flex-col transition-colors relative overflow-hidden ${
                                         !readOnly && draggedItem ? 'border-dashed border-primary/30 bg-white/5' : ''
                                     } ${
                                         isStageComplete ? 'border-emerald-500/30 bg-emerald-900/5' : 'border-white/5'
@@ -641,7 +727,7 @@ export default function SubProjectCard({ subProject, projectId, readOnly = false
                                         </div>
                                     )}
                                     
-                                    <div className="space-y-2 flex-1 min-h-[50px]">
+                                    <div className="space-y-2 flex-1 min-h-[50px] overflow-y-visible">
                                         {stage.items.map((item, iIdx) => {
                                             // Calculate Checklist Progress
                                             const totalChecklistItems = (item.checklists || []).reduce((acc, cl) => acc + (cl.items || []).length, 0);

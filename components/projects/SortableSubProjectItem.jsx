@@ -28,10 +28,10 @@ export default function SortableSubProjectItem({ subProject, projectId, projectN
             <div 
                 {...attributes} 
                 {...listeners} 
-                className="absolute -left-8 top-6 p-1 cursor-grab text-gray-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity touch-none"
+                className="absolute left-1 top-6 md:-left-8 md:top-6 p-1 cursor-grab text-gray-500 hover:text-white md:opacity-0 group-hover:opacity-100 transition-opacity touch-none z-20 bg-surface/50 md:bg-transparent rounded-full border border-white/10 md:border-none shadow-sm md:shadow-none backdrop-blur-sm"
                 title="Arraste para reordenar"
             >
-                <GripVertical size={20} />
+                <GripVertical size={16} className="md:w-5 md:h-5" />
             </div>
             
             <SubProjectCard 

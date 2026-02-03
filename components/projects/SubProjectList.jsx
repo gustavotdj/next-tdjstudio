@@ -95,7 +95,7 @@ export default function SubProjectList({ initialSubProjects, projectId, projectN
         items={items.map(i => i.id)} 
         strategy={verticalListSortingStrategy}
       >
-        <div className="space-y-4 ml-8"> {/* Added margin-left for the handle */}
+        <div className="space-y-4 pl-2 md:pl-8"> {/* Responsive padding for handle */}
           {items.length > 0 ? (
               items.map((sub) => (
                   <SortableSubProjectItem key={sub.id} subProject={sub} projectId={projectId} projectName={projectName} clientName={clientName} availableClients={availableClients} currentClientId={currentClientId} />

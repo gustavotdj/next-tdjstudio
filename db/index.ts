@@ -1,7 +1,11 @@
-import { neon } from '@neondatabase/serverless';
+import { neon, neonConfig } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
+import ws from 'ws';
 
 import * as schema from './schema';
+
+// Configurar WebSocket para ambientes que não suportam nativamente (como Node.js local)
+neonConfig.webSocketConstructor = ws;
 
 const connectionString = process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL;
 

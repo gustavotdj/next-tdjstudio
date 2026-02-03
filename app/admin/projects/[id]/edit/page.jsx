@@ -99,6 +99,7 @@ export default async function EditProjectPage({ params }) {
                             className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary/50 transition-colors appearance-none"
                         >
                             <option value="active">Em Andamento</option>
+                            <option value="paused">Pausado</option>
                             <option value="completed">Concluído</option>
                             <option value="archived">Arquivado</option>
                         </select>
