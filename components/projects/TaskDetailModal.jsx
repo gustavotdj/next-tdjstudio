@@ -547,7 +547,7 @@ export default function TaskDetailModal({
                                     <div className="flex-1 space-y-1">
                                         <div className="flex items-center gap-2">
                                             <span className="text-sm font-bold text-white">{comment.userName}</span>
-                                            <span className="text-[10px] text-text-muted">
+                                            <span className="text-[10px] text-text-muted" suppressHydrationWarning>
                                                 {new Date(comment.createdAt).toLocaleString('pt-BR', {
                                                     day: '2-digit',
                                                     month: '2-digit',

@@ -12,6 +12,9 @@ export const authOptions = {
         sessionsTable: schema.sessions,
         verificationTokensTable: schema.verificationTokens,
     }),
+    session: {
+        strategy: "database", // Force database strategy for consistency
+    },
     providers: [
         GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID || "missing-google-client-id",

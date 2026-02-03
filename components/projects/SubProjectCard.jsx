@@ -766,7 +766,7 @@ export default function SubProjectCard({ subProject, projectId, readOnly = false
                                                         </span>
                                                     )}
                                                     {item.dueDate && (
-                                                         <span title={`Entrega: ${item.dueDate}`} className={`flex items-center gap-1 font-mono ${new Date(item.dueDate) < new Date() && !item.completed ? 'text-red-400' : ''}`}>
+                                                         <span title={`Entrega: ${item.dueDate}`} className={`flex items-center gap-1 font-mono ${new Date(item.dueDate) < new Date() && !item.completed ? 'text-red-400' : ''}`} suppressHydrationWarning>
                                                             📅 {startDate ? `${new Date(startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} → ` : ''}
                                                             {new Date(item.dueDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
                                                         </span>
